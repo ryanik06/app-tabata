@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tabata Pro</title>
+
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+</head>
+
+<body>
+
+<div id="onboarding" class="screen active">
+  <h1>🔥 Tabata Pro</h1>
+  <p>Ton coach HIIT personnel</p>
+  <button onclick="startApp()">Commencer</button>
+</div>
+
+<div id="app" class="hidden">
+
+<header>
+  <h1>🔥 Tabata</h1>
+  <div id="status">Prêt</div>
+</header>
+
+<div class="circle" id="circle">
+  <div id="time">20</div>
+</div>
+
+<div class="controls">
+  <button onclick="start()">▶</button>
+  <button onclick="pause()">⏸</button>
+  <button onclick="reset()">↺</button>
+</div>
+
+<div class="card">
+  Travail <input id="work" value="20">
+  Repos <input id="rest" value="10">
+  Rounds <input id="rounds" value="8">
+  Sets <input id="sets" value="1">
+</div>
+
+<div class="card">
+  <input id="sessionName" placeholder="Nom séance">
+  <button onclick="saveSession()">💾</button>
+  <div id="sessions"></div>
+</div>
+
+<div class="card">
+  <h3>📊 Statistiques</h3>
+  <canvas id="chart"></canvas>
+</div>
+
+</div>
+
+<script src="app.js"></script>
+<script src="stats.js"></script>
+</body>
+</html>
