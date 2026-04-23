@@ -1,51 +1,60 @@
-import { useEffect, useMemo, useState } from "react";
-import { Play, Pause, RotateCcw } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Play, Pause, RotateCcw, Volume2, VolumeX } from "lucide-react";
+import { motion } from "framer-motion";
 
 /**
- * TABATA TIMER V3
- * Direction artistique: Apple Fitness+ / Nike Training Club inspired
- * - Design system structuré
- * - UI focus unique (timer-centric)
- * - Timeline rounds
- * - Micro-interactions premium
+ * TABATA V4
+ * Fitness-grade UI system
+ * - Presets (HIIT / Tabata / EMOM)
+ * - Sound + vibration feedback
+ * - Mobile-first interactions
+ * - Stronger motion system
  */
 
 const COLORS = {
   bg: "#0A0A0A",
-  card: "#111111",
-  muted: "#A1A1AA",
-  white: "#FFFFFF",
   work: "#22C55E",
   rest: "#3B82F6",
+  text: "#FFFFFF",
+  muted: "#A1A1AA",
 };
 
-function cx(...classes) {
-  return classes.filter(Boolean).join(" ");
-}
+const PRESETS = {
+  Tabata: { work: 20, rest: 10, rounds: 8 },
+  HIIT: { work: 40, rest: 20, rounds: 6 },
+  EMOM: { work: 45, rest: 15, rounds: 10 },
+};
 
-export default function TabataV3() {
+export default function TabataV4() {
+  const [preset, setPreset] = useState("Tabata");
   const [isRunning, setIsRunning] = useState(false);
   const [isRest, setIsRest] = useState(false);
-  const [seconds, setSeconds] = useState(20);
-  const [currentRound, setCurrentRound] = useState(0);
+  const [seconds, setSeconds] = useState(PRESETS[preset].work);
+  const [round, setRound] = useState(0);
+  const [sound, setSound] = useState(true);
 
-  const rounds = useMemo(
-    () => [
-      { name: "Warm-up", duration: 20 },
-      { name: "Sprint", duration: 20 },
-      { name: "Burn", duration: 20 },
-      { name: "Final Push", duration: 20 },
-    ],
-    []
-  );
+  const audioRef = useRef(null);
 
-  const total = rounds.length;
+  const config = PRESETS[preset];
 
   const progress = useMemo(() => {
-    const elapsed = currentRound + (1 - seconds / 20);
-    return (elapsed / total) * 100;
-  }, [currentRound, seconds, total]);
+    const total = config.rounds;
+    return (round / total) * 100;
+  }, [round, config.rounds]);
+
+  const playBeep = () => {
+    if (!sound) return;
+    if (!audioRef.current) {
+      audioRef.current = new Audio(
+        "https://actions.google.com/sounds/v1/alarms/beep_short.ogg"
+      );
+    }
+    audioRef.current.play();
+  };
+
+  const vibrate = () => {
+    if (navigator.vibrate) navigator.vibrate(150);
+  };
 
   useEffect(() => {
     if (!isRunning) return;
@@ -54,56 +63,62 @@ export default function TabataV3() {
       setSeconds((s) => {
         if (s > 1) return s - 1;
 
-        setIsRest((r) => !r);
-
+        // phase switch
         if (!isRest) {
-          return 10;
+          setIsRest(true);
+          playBeep();
+          vibrate();
+          return config.rest;
         } else {
-          setCurrentRound((r) => Math.min(r + 1, rounds.length - 1));
-          return 20;
+          setIsRest(false);
+          setRound((r) => r + 1);
+          playBeep();
+          vibrate();
+          return config.work;
         }
       });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isRunning, isRest, rounds.length]);
+  }, [isRunning, isRest, config]);
 
   const toggle = () => setIsRunning((v) => !v);
 
   const reset = () => {
     setIsRunning(false);
-    setSeconds(20);
+    setSeconds(config.work);
+    setRound(0);
     setIsRest(false);
-    setCurrentRound(0);
   };
 
   const activeColor = isRest ? COLORS.rest : COLORS.work;
 
   return (
-    <div
-      className="h-screen w-full flex flex-col items-center justify-between p-6"
-      style={{ background: COLORS.bg }}
-    >
+    <div className="h-screen w-full flex flex-col items-center justify-between p-6 bg-black">
       {/* HEADER */}
       <div className="w-full flex justify-between items-center">
-        <div className="text-xs uppercase tracking-[0.3em] text-zinc-500">
-          Tabata V3
-        </div>
-        <div className="text-xs text-zinc-600">Fitness OS UI</div>
+        <select
+          value={preset}
+          onChange={(e) => {
+            setPreset(e.target.value);
+            reset();
+          }}
+          className="bg-zinc-900 text-white text-sm p-2 rounded-lg"
+        >
+          {Object.keys(PRESETS).map((p) => (
+            <option key={p}>{p}</option>
+          ))}
+        </select>
+
+        <button onClick={() => setSound((s) => !s)}>
+          {sound ? <Volume2 color="#fff" /> : <VolumeX color="#666" />}
+        </button>
       </div>
 
-      {/* MAIN FOCUS */}
-      <div className="relative flex flex-col items-center justify-center flex-1">
-        {/* Circular progress ring */}
+      {/* TIMER */}
+      <div className="flex flex-col items-center justify-center flex-1">
         <svg className="w-72 h-72">
-          <circle
-            cx="144"
-            cy="144"
-            r="120"
-            stroke="#1A1A1A"
-            strokeWidth="10"
-            fill="none"
-          />
+          <circle cx="144" cy="144" r="120" stroke="#1A1A1A" strokeWidth="10" fill="none" />
           <motion.circle
             cx="144"
             cy="144"
@@ -113,70 +128,45 @@ export default function TabataV3() {
             fill="none"
             strokeLinecap="round"
             strokeDasharray="754"
-            animate={{
-              strokeDashoffset: 754 - (754 * seconds) / 20,
-            }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
+            animate={{ strokeDashoffset: 754 - (754 * seconds) / config.work }}
+            transition={{ duration: 0.5 }}
           />
         </svg>
 
-        {/* Center content */}
         <div className="absolute text-center">
-          <div className="text-zinc-500 text-sm tracking-widest uppercase">
+          <div className="text-zinc-400 uppercase text-sm">
             {isRest ? "Rest" : "Work"}
           </div>
-
-          <div className="text-7xl font-semibold tracking-tight text-white">
-            {seconds}
-          </div>
-
-          <div className="mt-2 text-sm text-zinc-500">
-            {rounds[currentRound]?.name}
+          <div className="text-7xl text-white font-bold">{seconds}</div>
+          <div className="text-zinc-500 text-sm">
+            Round {round + 1} / {config.rounds}
           </div>
         </div>
       </div>
 
-      {/* TIMELINE */}
-      <div className="w-full max-w-md flex gap-2 mb-6">
-        {rounds.map((r, i) => (
-          <motion.div
-            key={i}
-            className="flex-1 h-1 rounded-full"
-            animate={{
-              backgroundColor:
-                i < currentRound
-                  ? COLORS.white
-                  : i === currentRound
-                  ? activeColor
-                  : "#1f1f1f",
-            }}
-          />
-        ))}
+      {/* PROGRESS BAR */}
+      <div className="w-full max-w-md h-1 bg-zinc-800 rounded-full overflow-hidden mb-6">
+        <div className="h-full bg-white" style={{ width: `${progress}%` }} />
       </div>
 
       {/* CONTROLS */}
-      <div className="flex items-center gap-6">
-        <button
-          onClick={reset}
-          className="p-3 rounded-full bg-zinc-900 hover:bg-zinc-800 transition"
-        >
-          <RotateCcw size={18} color="#fff" />
+      <div className="flex gap-6">
+        <button onClick={reset} className="p-3 bg-zinc-900 rounded-full">
+          <RotateCcw color="#fff" />
         </button>
 
         <motion.button
           onClick={toggle}
           className="p-5 rounded-full"
           style={{ background: activeColor }}
-          whileTap={{ scale: 0.92 }}
+          whileTap={{ scale: 0.9 }}
         >
-          {isRunning ? <Pause color="black" /> : <Play color="black" />}
+          {isRunning ? <Pause color="#000" /> : <Play color="#000" />}
         </motion.button>
       </div>
 
-      {/* FOOTER LABEL */}
-      <div className="text-xs text-zinc-600 mt-4">
-        Focus • Intensity • Flow
-      </div>
+      {/* FOOTER */}
+      <div className="text-xs text-zinc-600 mt-4">V4 • Fitness System</div>
     </div>
   );
 }
